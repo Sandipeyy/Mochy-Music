@@ -20,14 +20,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup JDK
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Install SDK and NDK
         run: |
@@ -41,7 +43,8 @@ jobs:
           from pathlib import Path
           p = Path("build.sh")
           s = p.read_text()
-          p.write_text(s.replace("sed -i ''", "sed -i"))
+          s = s.replace("sed -i ''", "sed -i")
+          p.write_text(s)
           PY
 
       - name: Build APKs
@@ -81,10 +84,10 @@ jobs:
             echo "## Build log"
             if [ -f build.log ]; then
               echo '```text'
-              tail -n 100 build.log
+              tail -n 150 build.log
               echo '```'
             else
-              echo "Build log unavailable."
+              echo "Build log unavailable. Check the failed setup step."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
