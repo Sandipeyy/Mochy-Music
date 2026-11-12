@@ -1,0 +1,59 @@
+
+name: Build Mochy Music
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK and NDK
+        run: |
+          sdkmanager "platforms;android-36"
+          sdkmanager "ndk;27.0.12077973"
+          yes | sdkmanager --licenses
+
+      - name: Make build script Linux compatible
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("build.sh")
+          s = p.read_text()
+          s = s.replace("sed -i ''", "sed -i")
+          p.write_text(s)
+          PY
+
+      - name: Build APKs
+        run: |
+          chmod +x gradlew build.sh
+          ./build.sh --debug -cc
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mochy-Music-APKs
+          path: apk-generated/*.apk
+          if-no-files-found: error
+          retention-days: 7
