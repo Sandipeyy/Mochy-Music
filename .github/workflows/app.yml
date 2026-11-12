@@ -31,16 +31,33 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: Install SDK and NDK
+      - name: Accept Android Licenses and Install SDK
         run: |
-          sdkmanager "platforms;android-36"
-          sdkmanager "ndk;27.0.12077973"
           yes | sdkmanager --licenses
+          sdkmanager "platforms;android-36" \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1"
 
-      - name: Fix Linux build script
+      - name: Generate Debug Keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair \
+            -v \
+            -storetype JKS \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Fix Linux Build Script
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
           p = Path("build.sh")
           s = p.read_text()
           s = s.replace("sed -i ''", "sed -i")
@@ -48,7 +65,6 @@ jobs:
           PY
 
       - name: Build APKs
-        id: build
         run: |
           chmod +x gradlew build.sh
           set -o pipefail
@@ -87,7 +103,7 @@ jobs:
               tail -n 150 build.log
               echo '```'
             else
-              echo "Build log unavailable. Check the failed setup step."
+              echo "Build log unavailable."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
